@@ -36,24 +36,91 @@ spec:
       serviceAccountName: {{ include "kdc.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
-      containers:
-        - name: {{ .Chart.Name }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "kdc.fullname" . }}
+      initContainers:
+        - name: init-volumes
+          securityContext:
+            runAsNonRoot: false
+            runAsUser: 0
+            capabilities:
+              add:
+                - DAC_OVERRIDE
+                - FOWNER
+                - CHOWN
+              drop:
+                - ALL
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - /usr/local/bin/init-volumes
+          volumeMounts:
+            - name: {{ include "kdc.fullname" . }}
+              mountPath: /var/lib/krb5kdc
+        - name: init-realm
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - /usr/local/bin/init-realm
+          env:
+            {{- toYaml .Values.env | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/krb5kdc
+              readOnly: true
+            - name: {{ include "kdc.fullname" . }}
+              mountPath: /var/lib/krb5kdc
+      containers:
+        - name: kadmind-kpropd
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - /usr/local/bin/exec-kadmind-kpropd
           ports:
-            - name: http
-              containerPort: 80
+            - name: kerberos-tcp
+              containerPort: 88
               protocol: TCP
-          livenessProbe:
-            httpGet:
-              path: /
-              port: http
-          readinessProbe:
-            httpGet:
-              path: /
-              port: http
+            - name: kerberos-udp
+              containerPort: 88
+              protocol: UDP
+          env:
+            {{- toYaml .Values.env | nindent 12 }}
+          volumeMounts:
+            - name: {{ include "kdc.fullname" . }}
+              mountPath: /var/lib/krb5kdc
+            - name: config
+              mountPath: /etc/krb5kdc
+              readOnly: true
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+        - name: krb5kdc
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - /usr/local/bin/exec-krb5kdc
+          env:
+            {{- toYaml .Values.env | nindent 12 }}
+          ports:
+            - name: kerberos-tcp
+              containerPort: 88
+              protocol: TCP
+            - name: kerberos-udp
+              containerPort: 88
+              protocol: UDP
+          volumeMounts:
+            - name: {{ include "kdc.fullname" . }}
+              mountPath: /var/lib/krb5kdc
+            - name: config
+              mountPath: /etc/krb5kdc
+              readOnly: true
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}
