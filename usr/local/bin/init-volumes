@@ -1,0 +1,9 @@
+#!/bin/sh
+
+set -e
+
+MOUNT=/data
+
+# TODO: non-root
+chown -R 0:0 $MOUNT
+chmod 0700 $MOUNT
