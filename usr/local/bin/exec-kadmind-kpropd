@@ -1,0 +1,15 @@
+#!/bin/sh
+
+set -e
+
+# Are we the administration server?
+if [ "kdc-0" = "$(hostname)" ]; then
+  exec /usr/sbin/kadmind -nofork
+
+else
+  # Wait for DNS, even a small delay seems to be enough
+  sleep 5
+
+  # We are but a mere KDC, so start the replication process.
+  exec /usr/sbin/kpropd -a /etc/krb5kdc/kpropd.acl -d
+fi

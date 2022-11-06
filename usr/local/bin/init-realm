@@ -1,0 +1,11 @@
+#!/bin/sh
+
+set -e
+
+echo "Waiting until the stash file has been created"
+
+while [ ! -f /var/lib/krb5kdc/stash ]; do
+  sleep 5
+done
+
+echo "Stash file found, continuing"

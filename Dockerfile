@@ -15,3 +15,5 @@ RUN apt-get update \
  && install -d -m 0700 -o root -g root \
       /etc/krb5kdc \
       /var/lib/krb5kdc
+
+COPY --chown=root:root etc /etc/

@@ -2,8 +2,5 @@
 
 set -e
 
-MOUNT=/data
-
-# TODO: non-root
-chown -R 0:0 $MOUNT
-chmod 0700 $MOUNT
+chown -R 10000:10000 /var/lib/krb5kdc
+chmod 0700 /var/lib/krb5kdc
