@@ -1,0 +1,14 @@
+#!/bin/sh
+
+set -e
+
+# We need to ensure that the pod can become healthy before the initial kpropd
+# resync succeeds, so stall the KDC here.
+while [ ! -f /var/lib/krb5kdc/principal ]; do
+  sleep 5
+done
+
+# Cut some slack, probably won't matter but meh
+sleep 5
+
+exec /usr/sbin/krb5kdc -n
