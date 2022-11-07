@@ -42,8 +42,6 @@ spec:
             name: {{ include "kdc.fullname" . }}
         - name: tmp
           emptyDir: {}
-        - name: run
-          emptyDir: {}
       initContainers:
         - name: init-volumes
           securityContext:
