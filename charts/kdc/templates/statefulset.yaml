@@ -85,8 +85,11 @@ spec:
           command:
             - /usr/local/bin/exec-kadmind-kpropd
           ports:
+            - containerPort: 10464
+              name: kpasswd
+              protocol: TCP
             - containerPort: 10749
-              name: kerberos-adm
+              name: kadmind
               protocol: TCP
             - containerPort: 12121
               name: iprop

@@ -21,7 +21,9 @@ data:
         database_name           = /var/lib/krb5kdc/principal
         key_stash_file          = /var/lib/krb5kdc/stash
         kadmind_port            = 10749
-        kdc_ports               = 10088
+        kdc_listen              = 10088
+        kdc_tcp_listen          = 10088
+        kpasswd_port            = 10464
         iprop_enable            = true
         iprop_port              = 12121
         max_life                = 10h 0m 0s
@@ -42,9 +44,10 @@ data:
     [realms]
       {{ .Values.realm }} = {
         {{- range $index0 := until (.Values.replicaCount | int) }}
-        kdc = kdc-{{ $index0 }}.kdc.{{ $.Release.Namespace }}.{{ $.Values.clusterDomain }}
+        kdc = kdc-{{ $index0 }}.kdc.{{ $.Release.Namespace }}.{{ $.Values.clusterDomain }}:10088
         {{- end }}
-        admin_server = kdc-0.kdc.{{ .Release.Namespace }}.{{ .Values.clusterDomain }}
+        admin_server = kdc-0.kdc.{{ .Release.Namespace }}.{{ .Values.clusterDomain }}:10749
+        kpasswd_server = kdc-0.kdc.{{ .Release.Namespace }}.{{ .Values.clusterDomain }}:10464
       }
 
     [domain_realm]
