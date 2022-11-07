@@ -4,70 +4,102 @@ This repository includes a container image and Helm chart for running a Kerberos
 
 ## Installation
 
-1. Set the namespace:
+1. Set the namespace and some helper variables (the domain depends on the release name you pass to Helm, so make sure to change it also here if you do):
 
 ```
 NAMESPACE=kerberos
+DOMAIN=kdc.$NAMESPACE.svc.cluster.local
+
+PRIMARY=kdc-0
+SECONDARY=kdc-1
+TERTIARY=kdc-2
 ```
 
-2. Install the Kerberos administration server and key distribution centers:
+2. Install the Kerberos administration server and key distribution centers. Create a `values.yaml` file or use `--set` to customize any options you need:
 
 ```
-helm upgrade --install kdc charts/kdc --namespace $NAMESPACE --create-namespace \
-  --set persistence.storageClassName=local --set image.pullPolicy=Always --set image.tag=main --set replicaCount=2
+helm upgrade --install kdc charts/kdc --namespace $NAMESPACE --create-namespace
 ```
 
-3. Create the Kerberos database:
+The default install three KDCs, one of which is the administration server.
+
+3. Create the Kerberos database on the primary server:
 
 ```
-kubectl exec -it -n $NAMESPACE kdc-0 -c init-realm -- kdb5_util create -s
+kubectl exec -it -n $NAMESPACE $PRIMARY -c init-realm -- \
+  kdb5_util create -s
 ```
 
-4. Add the principals for the KDCs in the statefulset (kiprop/kdc-0 is automatically created):
+4. Create and add the principals for the administration server (`kiprop/` is automatically created):
 
 ```
-kubectl exec -n $NAMESPACE kdc-0 -c kadmind-kpropd -- kadmin.local -p local -q \
-  "addprinc -randkey host/kdc-0.kdc.$NAMESPACE.svc.cluster.local"
+kubectl exec -n $NAMESPACE $PRIMARY -c kadmind-kpropd -- \
+  kadmin.local -p local -q "addprinc -randkey host/$PRIMARY.$DOMAIN"
 
-kubectl exec -n $NAMESPACE kdc-0 -c kadmind-kpropd -- kadmin.local -p local -q \
-  "ktadd host/kdc-0.kdc.$NAMESPACE.svc.cluster.local kiprop/kdc-0.kdc.$NAMESPACE.svc.cluster.local"
-```
-# KDC (repeat for each replica)
-
-```
-kubectl exec -n $NAMESPACE kdc-0 -c kadmind-kpropd -- kadmin.local -p local -q \
-  "addprinc -randkey host/kdc-1.kdc.$NAMESPACE.svc.cluster.local"
-
-kubectl exec -n $NAMESPACE kdc-0 -c kadmind-kpropd -- kadmin.local -p local -q \
-  "addprinc -randkey kiprop/kdc-1.kdc.$NAMESPACE.svc.cluster.local"
-
-kubectl exec -n $NAMESPACE kdc-0 -c kadmind-kpropd -- kadmin.local -p local -q \
-  "ktadd -k /var/lib/krb5kdc/krb5.keytab.kdc-1 host/kdc-1.kdc.$NAMESPACE.svc.cluster.local kiprop/kdc-1.kdc.$NAMESPACE.svc.cluster.local"
-
+kubectl exec -n $NAMESPACE $PRIMARY -c kadmind-kpropd -- \
+  kadmin.local -p local -q "ktadd host/$PRIMARY.$DOMAIN kiprop/$PRIMARY.$DOMAIN"
 ```
 
-5. Transfer the keytab to replica kdc:s /var/lib/krb5kdc/krb5.keytab:
+5. Create and add the principals for the secondary and tertiary servers:
 
 ```
-KEYTAB=$(kubectl exec -n $NAMESPACE kdc-0 -c kadmind-kpropd -- cat /var/lib/krb5kdc/krb5.keytab.kdc-1 | base64 -w0)
-kubectl exec -n $NAMESPACE -c init-realm kdc-1 -- /bin/sh -c "umask 0077 && echo '$KEYTAB' | base64 -d > /var/lib/krb5kdc/krb5.keytab"
-kubectl exec -n $NAMESPACE kdc-0 -c kadmind-kpropd -- rm -f /var/lib/krb5kdc/krb5.keytab.kdc-1
+kubectl exec -n $NAMESPACE $PRIMARY -c kadmind-kpropd -- \
+  kadmin.local -p local -q "addprinc -randkey host/$SECONDARY.$DOMAIN"
+
+kubectl exec -n $NAMESPACE $PRIMARY -c kadmind-kpropd -- \
+  kadmin.local -p local -q "addprinc -randkey kiprop/$SECONDARY.$DOMAIN"
+
+kubectl exec -n $NAMESPACE $PRIMARY -c kadmind-kpropd -- \
+  kadmin.local -p local -q "ktadd -k /tmp/$SECONDARY.keytab host/$SECONDARY.$DOMAIN kiprop/$SECONDARY.$DOMAIN"
+
+kubectl exec -n $NAMESPACE $PRIMARY -c kadmind-kpropd -- \
+  kadmin.local -p local -q "addprinc -randkey host/$TERTIARY.$DOMAIN"
+
+kubectl exec -n $NAMESPACE $PRIMARY -c kadmind-kpropd -- \
+  kadmin.local -p local -q "addprinc -randkey kiprop/$TERTIARY.$DOMAIN"
+
+kubectl exec -n $NAMESPACE $PRIMARY -c kadmind-kpropd -- \
+  kadmin.local -p local -q "ktadd -k /tmp/$TERTIARY.keytab host/$TERTIARY.$DOMAIN kiprop/$TERTIARY.$DOMAIN"
 ```
 
-6. Copy the stash file from the kadmind data volume to the kdc data volumes. Use a more secure method if you use this in a production environment for who knows what reason:
+6. Transfer the stash and keytabs to the secondary KDC. Maybe use a more secure method:
 
 ```
-STASH=$(kubectl exec -n $NAMESPACE -c kadmind-kpropd kdc-0 -- cat /var/lib/krb5kdc/stash | base64 -w0)
-kubectl exec -n $NAMESPACE -c init-realm kdc-1 -- /bin/sh -c "umask 0077 && echo '$STASH' | base64 -d > /var/lib/krb5kdc/stash"
+STASH=$(kubectl exec -n $NAMESPACE $PRIMARY -c kadmind-kpropd -- \
+  cat /var/lib/krb5kdc/stash | base64 -w0)
+
+SECONDARY_KEYTAB=$(kubectl exec -n $NAMESPACE $PRIMARY -c kadmind-kpropd -- \
+  /bin/sh -c "cat /tmp/$SECONDARY.keytab | base64 -w0 && rm -f /tmp/$SECONDARY.keytab")
+
+kubectl exec -n $NAMESPACE $SECONDARY -c init-realm -- \
+  /bin/sh -c "umask 0077 && echo '$SECONDARY_KEYTAB' | base64 -d > /var/lib/krb5kdc/krb5.keytab"
+
+kubectl exec -n $NAMESPACE $SECONDARY -c init-realm -- \
+  /bin/sh -c "umask 0077 && echo '$STASH' | base64 -d > /var/lib/krb5kdc/stash"
+
 ```
 
-7. Check the `kpropd` logs if the initial synchronization was successful:
+7. Repeat the process for the tertiary KDC:
 
 ```
-kubectl logs -n $NAMESPACE kdc-1 -c kadmind-kpropd -f
+TERTIARY_KEYTAB=$(kubectl exec -n $NAMESPACE $PRIMARY -c kadmind-kpropd -- \
+  /bin/sh -c "cat /tmp/$TERTIARY.keytab | base64 -w0 && rm -f /tmp/$TERTIARY.keytab")
+
+kubectl exec -n $NAMESPACE $TERTIARY -c init-realm -- \
+  /bin/sh -c "umask 0077 && echo '$TERTIARY_KEYTAB' | base64 -d > /var/lib/krb5kdc/krb5.keytab"
+
+kubectl exec -n $NAMESPACE $TERTIARY -c init-realm -- \
+  /bin/sh -c "umask 0077 && echo '$STASH' | base64 -d > /var/lib/krb5kdc/stash"
 ```
 
-   You should see something along the lines of:
+8. Check the `kpropd` logs if the initial synchronization was successful:
+
+```
+kubectl logs -n $NAMESPACE $SECONDARY -c kadmind-kpropd
+kubectl logs -n $NAMESPACE $TERTIARY -c kadmind-kpropd
+```
+
+You should see something along the lines of:
 
 ```
 KDC is synchronized with master.
