@@ -18,6 +18,13 @@ clusterDomain: svc.cluster.local
 realm: HOME.ARPA
 domain: home.arpa
 
+networkPolicy:
+  create: true
+
+  # Used by network policy to allow DNS requests out to CoreDNS. Usually coredns
+  # or kube-system.
+  corednsNamespace: coredns
+
 env:
   - name: KRB5_TRACE
     value: /dev/stdout
@@ -59,8 +66,13 @@ securityContext:
   runAsNonRoot: true
 
 service:
-  type: ClusterIP
-  port: 80
+  kdc:
+    type: ClusterIP
+    port: 88
+  adm:
+    type: ClusterIP
+    kpasswdPort: 464
+    kadminPort: 749
 
 resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious

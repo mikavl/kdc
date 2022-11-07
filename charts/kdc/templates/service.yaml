@@ -5,11 +5,56 @@ metadata:
   labels:
     {{- include "kdc.labels" . | nindent 4 }}
 spec:
-  type: {{ .Values.service.type }}
+  type: ClusterIP
   ports:
-    - port: {{ .Values.service.port }}
-      targetPort: http
+    - port: {{ .Values.service.kdc.port }}
+      targetPort: kerberos-tcp
       protocol: TCP
-      name: http
+      name: kerberos-tcp
+    - port: {{ .Values.service.kdc.port }}
+      targetPort: kerberos-udp
+      protocol: UDP
+      name: kerberos-udp
   selector:
+    {{- include "kdc.selectorLabels" . | nindent 4 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "kdc.fullname" . }}-kdc
+  labels:
+    {{- include "kdc.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.kdc.type }}
+  ports:
+    - port: {{ .Values.service.kdc.port }}
+      targetPort: kerberos-tcp
+      protocol: TCP
+      name: kerberos-tcp
+    - port: {{ .Values.service.kdc.port }}
+      targetPort: kerberos-udp
+      protocol: UDP
+      name: kerberos-udp
+  selector:
+    {{- include "kdc.selectorLabels" . | nindent 4 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "kdc.fullname" . }}-kadmind-kpasswd
+  labels:
+    {{- include "kdc.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.adm.type }}
+  ports:
+    - port: {{ .Values.service.adm.kadminPort }}
+      targetPort: kadmind
+      protocol: TCP
+      name: kadmind
+    - port: {{ .Values.service.adm.kpasswdPort }}
+      targetPort: kpasswd
+      protocol: TCP
+      name: kpasswd
+  selector:
+    statefulset.kubernetes.io/pod-name: "{{ include "kdc.fullname" . }}-0"
     {{- include "kdc.selectorLabels" . | nindent 4 }}

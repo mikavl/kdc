@@ -1,0 +1,75 @@
+{{- if .Values.networkPolicy.create -}}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "kdc.fullname" . }}-egress
+  labels:
+    {{- include "kdc.labels" . | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+  - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Values.networkPolicy.corednsNamespace }}
+      ports:
+        - protocol: TCP
+          port: 53
+        - protocol: UDP
+          port: 53
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Release.Namespace }}
+      ports:
+        - protocol: TCP
+          port: 10088
+        - protocol: UDP
+          port: 10088
+        - protocol: TCP
+          port: 10749
+        - protocol: UDP
+          port: 10749
+        - protocol: TCP
+          port: 10754
+        - protocol: TCP
+          port: 12121
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "kdc.fullname" . }}-ingress
+  labels:
+    {{- include "kdc.labels" . | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Release.Namespace }}
+      ports:
+        - protocol: TCP
+          port: 10088
+        - protocol: UDP
+          port: 10088
+        - protocol: TCP
+          port: 10749
+        - protocol: UDP
+          port: 10749
+        - protocol: TCP
+          port: 10754
+        - protocol: TCP
+          port: 12121
+    - ports:
+        - protocol: TCP
+          port: 10088
+        - protocol: UDP
+          port: 10088
+        - protocol: TCP
+          port: 10749
+{{- end }}
