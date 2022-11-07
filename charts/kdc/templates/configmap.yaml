@@ -20,10 +20,10 @@ data:
         acl_file                = /etc/krb5kdc/kadm5.acl
         database_name           = /var/lib/krb5kdc/principal
         key_stash_file          = /var/lib/krb5kdc/stash
-        kadmind_port            = 749
-        kdc_ports               = 88
+        kadmind_port            = 10749
+        kdc_ports               = 10088
         iprop_enable            = true
-        iprop_port              = 2121
+        iprop_port              = 12121
         max_life                = 10h 0m 0s
         max_renewable_life      = 7d 0h 0m 0s
         master_key_type         = aes256-cts-hmac-sha1-96

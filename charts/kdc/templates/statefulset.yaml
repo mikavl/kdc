@@ -85,10 +85,10 @@ spec:
           command:
             - /usr/local/bin/exec-kadmind-kpropd
           ports:
-            - containerPort: 749
+            - containerPort: 10749
               name: kerberos-adm
               protocol: TCP
-            - containerPort: 2121
+            - containerPort: 12121
               name: iprop
               protocol: TCP
           env:
@@ -114,10 +114,10 @@ spec:
             {{- toYaml .Values.env | nindent 12 }}
           ports:
             - name: kerberos-tcp
-              containerPort: 88
+              containerPort: 10088
               protocol: TCP
             - name: kerberos-udp
-              containerPort: 88
+              containerPort: 10088
               protocol: UDP
           volumeMounts:
             - name: {{ include "kdc.fullname" . }}

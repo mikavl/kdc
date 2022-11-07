@@ -1,1 +1,6 @@
-krb-prop 754/tcp krb_prop krb5_prop hprop
+kerberos     10088/udp kdc
+kerberos     10088/tcp kdc
+kerberos-adm 10749/tcp
+kerberos-adm 10749/udp
+krb-prop     10754/tcp krb_prop krb5_prop hprop
+iprop        12121/tcp
