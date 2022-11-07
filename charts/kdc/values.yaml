@@ -27,6 +27,9 @@ env:
     value: /var/lib/krb5kdc/krb5.keytab
   - name: KRB5_KDC_PROFILE
     value: /etc/krb5kdc/kdc.conf
+  # https://web.mit.edu/kerberos/krb5-devel/doc/basic/rcache_def.html
+  - name: KRB5RCACHEDIR
+    value: /tmp
 
 persistence:
   storageClassName: ""
@@ -50,8 +53,8 @@ podSecurityContext:
 
 securityContext:
   capabilities:
-   drop:
-   - ALL
+    drop:
+      - ALL
   readOnlyRootFilesystem: true
   runAsNonRoot: true
 
