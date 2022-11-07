@@ -4,9 +4,13 @@ set -e
 
 # Are we the administration server?
 if [ "kdc-0" = "$(hostname)" ]; then
+  echo "Starting kadmind"
+
   exec /usr/sbin/kadmind -nofork
 
 else
+  echo "Starting kpropd"
+
   # Wait for DNS, even a small delay seems to be enough
   sleep 5
 

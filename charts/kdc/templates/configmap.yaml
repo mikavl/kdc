@@ -8,7 +8,7 @@ data:
   kadm5.acl: |
     */admin@{{ .Values.realm }} *
     {{- range $index0 := until (sub (.Values.replicaCount | int) 1 | int) }}
-    kiprop/kdc-{{ add1 $index0 }}.kdc.{{ $.Release.Namespace }}.{{ $.Values.clusterDomain }}{{ $.Values.realm }} p
+    kiprop/kdc-{{ add1 $index0 }}.kdc.{{ $.Release.Namespace }}.{{ $.Values.clusterDomain }}@{{ $.Values.realm }} p
     {{- end }}
 
   kpropd.acl: |

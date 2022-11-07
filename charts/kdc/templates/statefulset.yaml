@@ -40,6 +40,10 @@ spec:
         - name: config
           configMap:
             name: {{ include "kdc.fullname" . }}
+        - name: tmp
+          emptyDir: {}
+        - name: run
+          emptyDir: {}
       initContainers:
         - name: init-volumes
           securityContext:
@@ -83,12 +87,12 @@ spec:
           command:
             - /usr/local/bin/exec-kadmind-kpropd
           ports:
-            - name: kerberos-tcp
-              containerPort: 88
+            - containerPort: 749
+              name: kerberos-adm
               protocol: TCP
-            - name: kerberos-udp
-              containerPort: 88
-              protocol: UDP
+            - containerPort: 2121
+              name: iprop
+              protocol: TCP
           env:
             {{- toYaml .Values.env | nindent 12 }}
           volumeMounts:
@@ -97,6 +101,8 @@ spec:
             - name: config
               mountPath: /etc/krb5kdc
               readOnly: true
+            - name: tmp
+              mountPath: /tmp
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
         - name: krb5kdc
@@ -121,6 +127,8 @@ spec:
             - name: config
               mountPath: /etc/krb5kdc
               readOnly: true
+            - name: tmp
+              mountPath: /tmp
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}
