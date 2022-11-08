@@ -1,0 +1,13 @@
+#!/bin/sh
+
+set -e
+
+if [ "xkdc-0" = "x$(hostname)" ]; then
+
+  # Check ports 10464, 10749 and 12121
+  [ "x3" = "x$(awk '{print $2}' /proc/net/tcp | grep -cE '^00000000:(28E0|29FD|2F59)$')" ] || exit 1
+else
+
+  # Check port 10754
+  [ "x1" = "x$(awk '{print $2}' /proc/net/tcp | grep -cE '^00000000:(2768)$')" ] || exit 1
+fi

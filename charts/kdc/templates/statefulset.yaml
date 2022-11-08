@@ -94,6 +94,14 @@ spec:
             - containerPort: 12121
               name: iprop
               protocol: TCP
+          readinessProbe:
+            exec:
+              command:
+                - /usr/local/bin/health-kadmind-kpropd
+          livenessProbe:
+            exec:
+              command:
+                - /usr/local/bin/health-kadmind-kpropd
           env:
             {{- toYaml .Values.env | nindent 12 }}
           volumeMounts:
@@ -115,6 +123,12 @@ spec:
             - /usr/local/bin/exec-krb5kdc
           env:
             {{- toYaml .Values.env | nindent 12 }}
+          readinessProbe:
+            tcpSocket:
+              port: kerberos-tcp
+          livenessProbe:
+            tcpSocket:
+              port: kerberos-tcp
           ports:
             - name: kerberos-tcp
               containerPort: 10088
